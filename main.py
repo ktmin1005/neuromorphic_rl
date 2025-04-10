@@ -1,42 +1,44 @@
-from env.simple_env import SimpleEnv
-from model.basal_ganglia import BasalGangliaModel
-from agent.rl_agent import RLAgent
-import matplotlib.pyplot as plt
+# main.py
+from core.ensemble import Ensemble
+from env.gridworld import GridWorldEnv
+from core.encoding import encode_state
+from core.learning import apply_reward_modulated_hebbian_learning
+from core.utlis import select_action_from_spikes
+from utils.plotting import plot_voltage_traces, plot_tunings_over_time
 
-def main():
-    env = SimpleEnv()
-    brain = BasalGangliaModel()
-    agent = RLAgent(brain)
-
-    all_rewards = []
-    for episode in range(1000):
-        state = env.reset()
-        done = False
-        total_reward = 0
-
-        if episode < 2:
-            print("fEpisode {episode}: Initial state = {state}")
-
-        while not done:
-            action = agent.select_action(state)
-            next_state, reward, done = env.step(action)
-            agent.learn(state, action, reward, next_state, done)
-            state = next_state
-            total_reward += reward
-
-            if episode < 2:
-                print(f"State: {state}, Action: {action}, Reward: {reward}")
-            
-            if reward == 1:
-                print(f"Congrats! Agent reached the goal in episode {episode}")
-        
-        all_rewards.append(total_reward)
-        print(f"Episode {episode}: Reward = {total_reward}")
-    plt.scatter(range(len(all_rewards)), all_rewards, s = 5)
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.title('Learning Progress')
-    plt.show()
+import numpy as np
 
 if __name__ == "__main__":
-    main()
+    env = GridWorldEnv()
+    ensemble = Ensemble(num_neurons=4)
+
+    num_episodes = 10
+    steps_per_episode = 100
+    grid_size = env.grid_size
+
+    gain_history_x = [[] for _ in range(ensemble.num_neurons)]
+    gain_history_y = [[] for _ in range(ensemble.num_neurons)]
+    bias_history = [[] for _ in range(ensemble.num_neurons)]
+
+    for episode in range(num_episodes):
+        state = env.reset()
+        for step in range(steps_per_episode):
+            input_vector = encode_state(state, grid_size)
+
+            spikes = ensemble.step(input_vector)
+            action = select_action_from_spikes(spikes)
+
+            next_state, reward, done = env.step(action)
+            apply_reward_modulated_hebbian_learning(ensemble, input_vector, spikes, reward)
+
+            state = next_state
+            if done:
+                break
+
+        for i in range(ensemble.num_neurons):
+            gain_history_x[i].append(ensemble.gains[i][0])
+            gain_history_y[i].append(ensemble.gains[i][1])
+            bias_history[i].append(ensemble.biases[i])
+
+    plot_voltage_traces(ensemble)
+    plot_tunings_over_time(gain_history_x, gain_history_y, bias_history)
