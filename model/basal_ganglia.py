@@ -7,7 +7,7 @@ class BasalGangliaModel:
         self.weights = np.random.randn(output_size, input_size) * 0.1
 
     def forward(self, state):
-        state_vec = np.array(state) / 5.0  # normalize
+        state_vec = np.array(state) / 5.0  # Normalize input
         spikes = []
         for i, neuron in enumerate(self.neurons):
             input_current = np.dot(self.weights[i], state_vec)

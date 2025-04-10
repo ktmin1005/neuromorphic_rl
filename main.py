@@ -32,7 +32,7 @@ def main():
         
         all_rewards.append(total_reward)
         print(f"Episode {episode}: Reward = {total_reward}")
-    plt.plot(all_rewards)
+    plt.scatter(range(len(all_rewards)), all_rewards, s = 5)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
     plt.title('Learning Progress')
